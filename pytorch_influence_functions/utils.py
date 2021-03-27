@@ -134,6 +134,7 @@ def get_default_config():
         'damp': None,
         'calc_method': 'img_wise',
         'log_filename': None,
+        'is_pix2pix': False,
     }
 
     return config

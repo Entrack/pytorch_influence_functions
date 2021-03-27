@@ -40,7 +40,12 @@ def s_test(z_test, t_test, model, z_loader, gpu=-1, damp=0.01, scale=25.0,
         #########################
         for x, t in z_loader:
             if gpu >= 0:
-                x, t = x.cuda(), t.cuda()
+                if isinstance(x, (tuple, list)):
+                    x[0] = x[0].cuda()
+                    x[1] = x[1].cuda()
+                else:
+                    x = x.cuda()
+                t = t.cuda()
             y = model(x)
             loss = calc_loss(y, t)
             params = [ p for p in model.parameters() if p.requires_grad ]
@@ -67,9 +72,12 @@ def calc_loss(y, t):
     # if dim == [0, 1, 3] then dim=0; else dim=1
     ####################
     # y = torch.nn.functional.log_softmax(y, dim=0)
-    y = torch.nn.functional.log_softmax(y)
-    loss = torch.nn.functional.nll_loss(
-        y, t, weight=None, reduction='mean')
+    if len(y.shape) == len(t.shape) == 4:
+        loss = torch.nn.functional.mse_loss(y, t)
+    else:
+        y = torch.nn.functional.log_softmax(y)
+        loss = torch.nn.functional.nll_loss(
+            y, t, weight=None, reduction='mean')
     return loss
 
 
@@ -90,7 +98,12 @@ def grad_z(z, t, model, gpu=-1):
     model.eval()
     # initialize
     if gpu >= 0:
-        z, t = z.cuda(), t.cuda()
+        if isinstance(z, (tuple, list)):
+            z[0] = z[0].cuda()
+            z[1] = z[1].cuda()
+        else:
+            z = z.cuda()
+        t = t.cuda()
     y = model(z)
     loss = calc_loss(y, t)
     # Compute sum of gradients from model parameters to loss

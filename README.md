@@ -1,3 +1,9 @@
+This fork is hotfixed to work with image-to-image models like VAE, denoising networks, etc.  
+To use it set `is_pix2pix` config component to `True`. See `test_img_wise.py` for example.  
+Only tested for `test_img_wise.py` scenario.
+
+Search tags: influence functions, image-to-image, pix2pix, image to image, influence function.
+
 # Influence Functions for PyTorch
 
 This is a PyTorch reimplementation of Influence Functions from the ICML2017 best paper:

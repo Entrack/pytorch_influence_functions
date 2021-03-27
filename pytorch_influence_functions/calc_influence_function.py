@@ -426,14 +426,26 @@ def calc_img_wise(config, model, train_loader, test_loader):
     influences_meta = copy.deepcopy(config)
     test_sample_num = config['test_sample_num']
     test_start_index = config['test_start_index']
+    is_pix2pix = config['is_pix2pix']
     outdir = Path(config['outdir'])
     outdir.mkdir(exist_ok=True, parents=True)
+
+    if config['is_pix2pix'] and not config['test_start_index'] == 0:
+        raise ValueError("'is_pix2pix' and 'test_start_index' are incompatible for now")
+    
+    from warnings import warn
+    if config['is_pix2pix'] and config['num_classes']:
+        warn("If 'is_pix2pix' is set 'num_classes' is not used. Set it to None to supress")
+    if not config['dataset'] == "CIFAR10":
+        warn(f"'dataset' is set to {config['dataset']}, but this argument is not used")
 
     # If calculating the influence for a subset of the whole dataset,
     # calculate it evenly for the same number of samples from all classes.
     # `test_start_index` is `False` when it hasn't been set by the user. It can
     # also be set to `0`.
-    if test_sample_num and test_start_index is not False:
+    if test_sample_num and is_pix2pix:
+        test_dataset_iter_len = test_sample_num
+    elif test_sample_num and not test_start_index == 0:
         test_dataset_iter_len = test_sample_num * config['num_classes']
         _, sample_list = get_dataset_sample_ids(test_sample_num, test_loader,
                                                 config['num_classes'],
@@ -444,7 +456,8 @@ def calc_img_wise(config, model, train_loader, test_loader):
     # Set up logging and save the metadata conf file
     logging.info(f"Running on: {test_sample_num} images per class.")
     logging.info(f"Starting at img number: {test_start_index} per class.")
-    influences_meta['test_sample_index_list'] = sample_list
+    if test_sample_num and not test_start_index == 0 and not is_pix2pix:
+        influences_meta['test_sample_index_list'] = sample_list
     influences_meta_fn = f"influences_results_meta_{test_start_index}-" \
                          f"{test_sample_num}.json"
     influences_meta_path = outdir.joinpath(influences_meta_fn)
@@ -476,7 +489,8 @@ def calc_img_wise(config, model, train_loader, test_loader):
         ###########
         influences[str(i)] = {}
         _, label = test_loader.dataset[i]
-        influences[str(i)]['label'] = label
+        if not is_pix2pix:
+            influences[str(i)]['label'] = label
         influences[str(i)]['num_in_dataset'] = j
         influences[str(i)]['time_calc_influence_s'] = end_time - start_time
         infl = [x.cpu().numpy().tolist() for x in influence]
